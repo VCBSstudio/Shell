@@ -71,10 +71,36 @@ EOF
 
 chmod +x "$MDX_PATH"
 
-# PATH 提示
+# 自动添加 PATH 到 shell 配置文件
 if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then
-    echo "请将以下路径添加到你的 shell 配置文件中（.zshrc 或 .bashrc）:"
-    echo 'export PATH="$HOME/.local/bin:$PATH"'
+    # 检测当前 shell 并确定配置文件
+    SHELL_CONFIG=""
+    if [[ "$SHELL" == *"zsh"* ]] || [[ -n "$ZSH_VERSION" ]]; then
+        SHELL_CONFIG="$HOME/.zshrc"
+    elif [[ "$SHELL" == *"bash"* ]] || [[ -n "$BASH_VERSION" ]]; then
+        SHELL_CONFIG="$HOME/.bashrc"
+        # 如果 .bashrc 不存在，尝试 .bash_profile
+        if [[ ! -f "$SHELL_CONFIG" ]] && [[ -f "$HOME/.bash_profile" ]]; then
+            SHELL_CONFIG="$HOME/.bash_profile"
+        fi
+    fi
+    
+    if [[ -n "$SHELL_CONFIG" ]]; then
+        PATH_LINE='export PATH="$HOME/.local/bin:$PATH"'
+        # 检查是否已经存在
+        if ! grep -q "$HOME/.local/bin" "$SHELL_CONFIG" 2>/dev/null; then
+            echo "" >> "$SHELL_CONFIG"
+            echo "# Added by install_mdt.sh" >> "$SHELL_CONFIG"
+            echo "$PATH_LINE" >> "$SHELL_CONFIG"
+            echo "✅ 已自动将 PATH 添加到 $SHELL_CONFIG"
+            echo "💡 请运行 'source $SHELL_CONFIG' 或重新打开终端以使配置生效"
+        else
+            echo "✅ PATH 配置已存在于 $SHELL_CONFIG"
+        fi
+    else
+        echo "⚠️  无法自动检测 shell 类型，请手动将以下内容添加到你的 shell 配置文件:"
+        echo 'export PATH="$HOME/.local/bin:$PATH"'
+    fi
 fi
 
 echo "终极版 mdx v3 安装完成！使用 'mdt' 即可。"
